@@ -3,12 +3,14 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>キラキラ！さんすうドリル</title>
+	<title>キラキラ！さんすうドリル DX</title>
 	<style>
 		:root {
-			--primary-color: #ff6b6b;
-			--secondary-color: #4ecdc4;
+			--primary-color: #ff6b6b; /* Cボタン・消去系 */
+			--secondary-color: #4ecdc4; /* 決定ボタン・緑 */
 			--accent-color: #feca57;
+			--multi-color: #a29bfe;
+			--div-color: #ff9f43;
 			--bg-color: #f0f4f8;
 		}
 
@@ -20,14 +22,15 @@
 			justify-content: center;
 			align-items: center;
 			min-height: 100vh;
-			touch-action: manipulation; /* 連打時のズーム防止 */
+			touch-action: manipulation;
+			overflow: hidden;
 		}
 
 		#app {
 			background: white;
 			width: 95%;
-			max-width: 400px;
-			padding: 20px;
+			max-width: 420px;
+			padding: 15px;
 			border-radius: 30px;
 			box-shadow: 0 15px 35px rgba(0,0,0,0.1);
 			text-align: center;
@@ -35,37 +38,41 @@
 			position: relative;
 		}
 
-		/* モード切替スイッチ */
 		.mode-selector {
-			display: flex;
-			gap: 10px;
-			justify-content: center;
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 5px;
 			margin-bottom: 15px;
 		}
 
 		.mode-btn {
-			padding: 8px 15px;
-			border-radius: 20px;
-			border: 2px solid #ddd;
+			padding: 10px 2px;
+			border-radius: 12px;
+			border: 2px solid #eee;
 			background: white;
 			cursor: pointer;
 			font-weight: bold;
+			font-size: 0.8rem;
+			transition: 0.2s;
 		}
 
-		.mode-btn.active {
-			background: var(--accent-color);
-			border-color: var(--accent-color);
-			color: white;
-		}
+		.mode-btn.active { color: white; border-color: transparent; transform: scale(1.05); }
+		#mode-plus.active { background: #ff8787; }
+		#mode-minus.active { background: #63e6be; }
+		#mode-multi.active { background: var(--multi-color); }
+		#mode-div.active { background: var(--div-color); }
 
-		.stats { display: flex; justify-content: space-between; font-weight: bold; color: #666; margin-bottom: 10px; }
+		.stats { display: flex; justify-content: space-between; font-weight: bold; color: #666; margin-bottom: 5px; padding: 0 10px; }
 
 		.question-area {
 			font-size: 3.5rem;
-			margin: 20px 0;
+			margin: 15px 0;
 			font-weight: 900;
 			color: #333;
-			min-height: 80px;
+			min-height: 85px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
 		}
 
 		.input-display {
@@ -74,18 +81,20 @@
 			line-height: 70px;
 			background: #f9f9f9;
 			border-radius: 15px;
-			margin-bottom: 20px;
+			margin-bottom: 15px;
 			border-bottom: 5px solid #ddd;
+			color: #333;
+			font-weight: bold;
 		}
 
 		.numpad {
 			display: grid;
 			grid-template-columns: repeat(3, 1fr);
-			gap: 12px;
+			gap: 10px;
 		}
 
 		button {
-			padding: 18px;
+			padding: 15px;
 			font-size: 1.6rem;
 			border: none;
 			border-radius: 18px;
@@ -97,16 +106,13 @@
 
 		button:active { transform: translateY(4px); box-shadow: none; }
 
-		.btn-number { border: 2px solid #f0f0f0; }
+		.btn-number { border: 1px solid #eee; }
+		
+		/* 答えるボタンとCボタンの色 */
 		.btn-enter { background: var(--secondary-color); color: white; grid-column: span 2; box-shadow: 0 4px 0 #3db8af; }
 		.btn-clear { background: var(--primary-color); color: white; box-shadow: 0 4px 0 #e65b5b; }
 
-		/* キラキラ演出用 */
-		.particle {
-			position: absolute;
-			pointer-events: none;
-			z-index: 100;
-		}
+		.particle { position: absolute; pointer-events: none; z-index: 100; }
 
 		.result-screen { display: none; }
 		.result-screen h2 { color: var(--primary-color); font-size: 2rem; }
@@ -117,8 +123,10 @@
 <div id="app">
 	<div id="game-screen">
 		<div class="mode-selector">
-			<button class="mode-btn active" id="mode-plus" onclick="setMode('plus')">たしざん</button>
-			<button class="mode-btn" id="mode-minus" onclick="setMode('minus')">ひきざん</button>
+			<button class="mode-btn active" id="mode-plus" onclick="setMode('plus')">＋</button>
+			<button class="mode-btn" id="mode-minus" onclick="setMode('minus')">－</button>
+			<button class="mode-btn" id="mode-multi" onclick="setMode('multi')">×</button>
+			<button class="mode-btn" id="mode-div" onclick="setMode('div')">÷</button>
 		</div>
 
 		<div class="stats">
@@ -126,7 +134,7 @@
 			<span>せいかい: <span id="score">0</span></span>
 		</div>
 
-		<div class="question-area" id="question">?-?</div>
+		<div class="question-area" id="question">?</div>
 		<div class="input-display" id="answer-input"></div>
 
 		<div class="numpad">
@@ -146,9 +154,9 @@
 	</div>
 
 	<div id="result-screen" class="result-screen">
-		<h2>🎉 すごい！ 🎉</h2>
+		<h2 id="result-title">🎉 おめでとう！ 🎉</h2>
 		<p id="final-score" style="font-size: 1.5rem; font-weight: bold;"></p>
-		<button onclick="location.reload()" style="background: var(--accent-color); color:white; width:100%; box-shadow: 0 4px 0 #e6af2e;">もういちど やる！</button>
+		<button onclick="location.reload()" style="background: var(--secondary-color); color:white; width:100%; box-shadow: 0 4px 0 #3db8af;">もういちど やる！</button>
 	</div>
 </div>
 
@@ -156,11 +164,18 @@
 	let num1, num2, correctAnswer, mode = 'plus';
 	let score = 0, count = 0, maxQuestions = 10;
 	let currentInput = "";
+	let audioCtx = null;
+
+	// 音声を初期化する関数（最初のクリックで発動）
+	function initAudio() {
+		if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+	}
 
 	function setMode(newMode) {
+		initAudio();
 		mode = newMode;
-		document.getElementById('mode-plus').classList.toggle('active', mode === 'plus');
-		document.getElementById('mode-minus').classList.toggle('active', mode === 'minus');
+		document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+		document.getElementById(`mode-${mode}`).classList.add('active');
 		resetGame();
 	}
 
@@ -175,21 +190,34 @@
 		currentInput = "";
 		updateDisplay();
 		
+		let qText = "";
 		if (mode === 'plus') {
 			num1 = Math.floor(Math.random() * 9) + 1;
 			num2 = Math.floor(Math.random() * 9) + 1;
 			correctAnswer = num1 + num2;
-			document.getElementById('question').innerText = `${num1} + ${num2}`;
-		} else {
-			// 引き算は答えがマイナスにならないように調整
+			qText = `${num1} + ${num2}`;
+		} else if (mode === 'minus') {
 			num1 = Math.floor(Math.random() * 15) + 5;
-			num2 = Math.floor(Math.random() * num1) + 1;
+			num2 = Math.floor(Math.random() * (num1 - 1)) + 1;
 			correctAnswer = num1 - num2;
-			document.getElementById('question').innerText = `${num1} - ${num2}`;
+			qText = `${num1} - ${num2}`;
+		} else if (mode === 'multi') {
+			num1 = Math.floor(Math.random() * 9) + 1;
+			num2 = Math.floor(Math.random() * 9) + 1;
+			correctAnswer = num1 * num2;
+			qText = `${num1} × ${num2}`;
+		} else if (mode === 'div') {
+			const ans = Math.floor(Math.random() * 9) + 1;
+			num2 = Math.floor(Math.random() * 8) + 2;
+			num1 = ans * num2;
+			correctAnswer = ans;
+			qText = `${num1} ÷ ${num2}`;
 		}
+		document.getElementById('question').innerText = qText;
 	}
 
 	function addNum(n) {
+		initAudio();
 		if (currentInput.length < 3) {
 			currentInput += n;
 			updateDisplay();
@@ -210,8 +238,11 @@
 		const userAnswer = parseInt(currentInput);
 
 		if (userAnswer === correctAnswer) {
+			playSuccessSound();
 			createSparkles();
 			score++;
+		} else {
+			playErrorSound();
 		}
 		
 		count++;
@@ -219,46 +250,73 @@
 		document.getElementById('remaining').innerText = maxQuestions - count;
 
 		if (count < maxQuestions) {
-			setTimeout(generateQuestion, 400);
+			setTimeout(generateQuestion, 500);
 		} else {
 			setTimeout(showResult, 600);
 		}
 	}
 
-	// キラキラエフェクト
+	// 正解の音
+	function playSuccessSound() {
+		if (!audioCtx) return;
+		const osc = audioCtx.createOscillator();
+		const gain = audioCtx.createGain();
+		osc.type = 'sine';
+		osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+		osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
+		gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+		gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+		osc.connect(gain);
+		gain.connect(audioCtx.destination);
+		osc.start();
+		osc.stop(audioCtx.currentTime + 0.3);
+	}
+
+	// 不正解の音
+	function playErrorSound() {
+		if (!audioCtx) return;
+		const osc = audioCtx.createOscillator();
+		const gain = audioCtx.createGain();
+		osc.type = 'triangle';
+		osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+		gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+		gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+		osc.connect(gain);
+		gain.connect(audioCtx.destination);
+		osc.start();
+		osc.stop(audioCtx.currentTime + 0.2);
+	}
+
 	function createSparkles() {
-		for (let i = 0; i < 20; i++) {
+		const emojis = ['✨', '🌟', '🍭', '🌈', '💎', '🍦'];
+		for (let i = 0; i < 25; i++) {
 			const particle = document.createElement('div');
 			particle.className = 'particle';
-			particle.innerText = ['⭐', '✨', '🎈', '🌸'][Math.floor(Math.random() * 4)];
+			particle.innerText = emojis[Math.floor(Math.random() * emojis.length)];
 			particle.style.left = '50%';
 			particle.style.top = '40%';
-			particle.style.fontSize = (Math.random() * 20 + 20) + 'px';
+			particle.style.fontSize = (Math.random() * 20 + 25) + 'px';
 			document.body.appendChild(particle);
 
-			const destinationX = (Math.random() - 0.5) * 400;
-			const destinationY = (Math.random() - 0.5) * 400;
+			const dX = (Math.random() - 0.5) * 600;
+			const dY = (Math.random() - 0.5) * 600;
 
-			const animation = particle.animate([
+			particle.animate([
 				{ transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-				{ transform: `translate(${destinationX}px, ${destinationY}px) scale(0)`, opacity: 0 }
-			], {
-				duration: 800 + Math.random() * 400,
-				easing: 'cubic-bezier(0, .9, .57, 1)'
-			});
-
-			animation.onfinish = () => particle.remove();
+				{ transform: `translate(${dX}px, ${dY}px) scale(0) rotate(720deg)`, opacity: 0 }
+			], { duration: 1000, easing: 'ease-out' }).onfinish = () => particle.remove();
 		}
 	}
 
 	function showResult() {
 		document.getElementById('game-screen').style.display = 'none';
 		document.getElementById('result-screen').style.display = 'block';
+		const title = score === maxQuestions ? "🎉 ぜんもんせいかい！ 🎉" : "🎉 よくがんばったね！ 🎉";
+		document.getElementById('result-title').innerText = title;
 		document.getElementById('final-score').innerText = `${maxQuestions}もん中 ${score}もん せいかい！`;
 	}
 
 	generateQuestion();
 </script>
-
 </body>
 </html>
